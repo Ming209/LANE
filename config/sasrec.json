@@ -1,0 +1,7 @@
+{
+    "embedding_dim":384,
+    "num_heads":1,
+    "num_blocks":2,
+    "dropout_rate":0.5,
+    "layer_norm_eps": 1e-8
+}

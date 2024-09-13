@@ -1,0 +1,7 @@
+{
+    "input_size":384,
+    "hidden_size":384,
+    "output_size":384,
+    "dropout_rate":0.5,
+    "num_layers":2
+}

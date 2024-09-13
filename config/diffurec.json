@@ -1,0 +1,12 @@
+{
+    "hidden_size":384,
+    "dropout":0.1,
+    "emb_dropout":0.1,
+    "hidden_act":"gelu",
+    "num_blocks":4,
+    "schedule_sampler_name":"lossaware",
+    "diffusion_steps":32,
+    "lambda_uncertainty":0.001,
+    "noise_schedule":"trunc_lin",
+    "rescale_timesteps":true
+}
