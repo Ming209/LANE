@@ -8,14 +8,14 @@ Please cite our paper if you use the code.
 
 ##  Installation
 
-1. clone the repositoru
+1. **clone the repositoru**
 
 ```
 git clone https://github.com/Ming209/LANE.git
 cd LANE
 ```
 
-2. Requirement
+2. **Requirement**
 
 
 Use the following command to install the required dependencies:
@@ -24,7 +24,7 @@ Use the following command to install the required dependencies:
 pip install -r requirements.txt
 ```
 
-3. Datesets
+3. **Datesets**
 
 You can download the three real-world datasets we used from the link below.
 
@@ -40,7 +40,7 @@ Before running the code, you need to put the downloaded dataset into the corresp
 
 For simplicity, here we take ml-1m as an example：
 
-1. Data Preparation
+1. **Data Preparation**
 
 Use the following code to process different datasets into a unified txt format. You can find them in the `data/dataset/serialize` folder:
 
@@ -57,7 +57,7 @@ python Datapreprocessed.py --dataset=Beauty
 >[!NOTE]
 >the GPT-3.5-turbo API will be called here, and you need to fill in the **API key** in the *gpt_request()* function in `utils.py` in advance
 
-2. Train
+2. **Train**
 
 To train **Baseline(SASRec)** on Beauty (with default hyper-parameters):
 
