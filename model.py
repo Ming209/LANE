@@ -91,12 +91,12 @@ class BERT4Rec(nn.Module):
 
         return pos_logits, neg_logits # pos_pred, neg_pred
 
-    def predict(self, user_ids, log_seqs, item_indices=None): # for inference
+    def predict(self, user_ids, log_seqs, item_indices=None,is_eavl=False): # for inference
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
 
-        if item_indices is None : return final_feat
+        if not is_eavl: return final_feat
 
         item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
 
@@ -105,230 +105,7 @@ class BERT4Rec(nn.Module):
         # preds = self.pos_sigmoid(logits) # rank same item list for different users
 
         return logits # preds # (U, I)
-
-class Caser(nn.Module):
-    def __init__(self, usernum, itemnum, args, config, embeddings=None):
-        super(Caser, self).__init__()
-        self.embedding_size = config["embedding_size"]
-        self.n_h = config["nh"]
-        self.n_v = config["nv"]
-        self.dropout_prob = config["dropout_prob"]
-        self.n_items = itemnum
-        self.n_users = usernum
-        self.max_seq_length = args.maxlen
-        self.dev = args.device
-
-        self.user_emb = nn.Embedding(
-            self.n_users, self.embedding_size, padding_idx=0
-        )
-
-        if embeddings is None:
-            self.item_emb = torch.nn.Embedding(self.n_items +1, self.embedding_size, padding_idx=0)
-            torch.nn.init.xavier_normal_(self.item_emb.weight)
-        else:
-            self.item_emb = torch.nn.Embedding(embeddings.shape[0], embeddings.shape[1], padding_idx=0, _weight=embeddings)
-           
-
-        self.conv_v = nn.Conv2d(
-            in_channels=1, out_channels=self.n_v, kernel_size=(self.max_seq_length, 1)
-        )
-
-        # horizontal conv layer
-        lengths = [i + 1 for i in range(self.max_seq_length)]
-        self.conv_h = nn.ModuleList(
-            [
-                nn.Conv2d(
-                    in_channels=1,
-                    out_channels=self.n_h,
-                    kernel_size=(i, self.embedding_size),
-                )
-                for i in lengths
-            ]
-        )
-
-        # fully-connected layer
-        self.fc1_dim_v = self.n_v * self.embedding_size
-        self.fc1_dim_h = self.n_h * len(lengths)
-        fc1_dim_in = self.fc1_dim_v + self.fc1_dim_h
-        self.fc1 = nn.Linear(fc1_dim_in, self.embedding_size)
-        self.fc2 = nn.Linear(
-            self.embedding_size + self.embedding_size, self.embedding_size
-        )
-
-        self.dropout = nn.Dropout(self.dropout_prob)
-        self.ac_conv = nn.ReLU()
-        self.ac_fc = nn.ReLU()
-    
-    def log2feats(self, user_ids, log_seqs):
-        # Embedding Look-up
-        # use unsqueeze() to get a 4-D input for convolution layers. (batch_size * 1 * max_length * embedding_size)
-        log_seqs = torch.LongTensor(log_seqs).to(self.dev)
-        user_ids = torch.LongTensor(user_ids).to(self.dev)
-        log_seqs_emb = self.item_emb(log_seqs).unsqueeze(1)
-        user_emb = self.user_emb(user_ids).squeeze(1)
-
-        # Convolutional Layers
-        out, out_h, out_v = None, None, None
-        # vertical conv layer
-        if self.n_v:
-            out_v = self.conv_v(log_seqs_emb)
-            out_v = out_v.view(-1, self.fc1_dim_v)  # prepare for fully connect
-
-        # horizontal conv layer
-        out_hs = list()
-        if self.n_h:
-            for conv in self.conv_h:
-                conv_out = self.ac_conv(conv(log_seqs_emb).squeeze(3))
-                pool_out = fn.max_pool1d(conv_out, conv_out.size(2)).squeeze(2)
-                out_hs.append(pool_out)
-            out_h = torch.cat(out_hs, 1)  # prepare for fully connect
-
-        # Fully-connected Layers
-        out = torch.cat([out_v, out_h], 1)
-        # apply dropout
-        out = self.dropout(out)
-        # fully-connected layer
-        z = self.ac_fc(self.fc1(out))
-        x = torch.cat([z, user_emb], 1)
-        output = self.ac_fc(self.fc2(x))
-        # the hidden_state of the predicted item, size:(batch_size * hidden_size)
-        return output
-
-    
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training        
-        log_feats = self.log2feats(user_ids, log_seqs) # user_ids hasn't been used yet
-
-        pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
-        neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
-
-        pos_logits = (log_feats * pos_embs).sum(dim=-1)
-        neg_logits = (log_feats * neg_embs).sum(dim=-1)
-
-        # pos_pred = self.pos_sigmoid(pos_logits)
-        # neg_pred = self.neg_sigmoid(neg_logits)
-
-        return pos_logits, neg_logits # pos_pred, neg_pred
-
-    def predict(self, user_ids, log_seqs, item_indices=None): # for inference
-        log_feats = self.log2feats(user_ids, log_seqs) # user_ids hasn't been used yet
-
-        final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
-
-        if item_indices is None : return final_feat
-
-        item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
-
-        logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
-
-        # preds = self.pos_sigmoid(logits) # rank same item list for different users
-
-        return logits # preds # (U, I)
-
-class FEARec(nn.Module):
-    def __init__(self, usernum, itemnum, args, config, embeddings=None):
-        super(FEARec, self).__init__()
-
-        # load parameters info
-        self.config = config
-        self.n_layers = config['n_layers']
-        self.n_heads = config['n_heads']
-        self.hidden_size = config['hidden_size']  # same as embedding_size
-        self.inner_size = config['inner_size']  # the dimensionality in feed-forward layer
-        self.hidden_dropout_prob = config['hidden_dropout_prob']
-        self.attn_dropout_prob = config['attn_dropout_prob']
-        self.hidden_act = config['hidden_act']
-        self.layer_norm_eps = config['layer_norm_eps']
         
-        self.max_seq_length = config['MAX_ITEM_LIST_LENGTH']
-        self.n_items = itemnum
-        self.dev = args.device
-
-        # define layers and loss
-        if embeddings is None:
-            self.item_emb = torch.nn.Embedding(self.n_items +1, self.hidden_size, padding_idx=0)
-            torch.nn.init.xavier_normal_(self.item_emb.weight)
-        else:
-            self.item_emb = torch.nn.Embedding(embeddings.shape[0], embeddings.shape[1], padding_idx=0, _weight=embeddings)
-            
-        self.position_emb = nn.Embedding(self.max_seq_length, self.hidden_size)
-        self.item_encoder = FEAEncoder(
-            n_layers=self.n_layers,
-            n_heads=self.n_heads,
-            hidden_size=self.hidden_size,
-            inner_size=self.inner_size,
-            hidden_dropout_prob=self.hidden_dropout_prob,
-            attn_dropout_prob=self.attn_dropout_prob,
-            hidden_act=self.hidden_act,
-            layer_norm_eps=self.layer_norm_eps,
-            config=self.config,
-        )
-
-        self.LayerNorm = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
-        self.dropout = nn.Dropout(self.hidden_dropout_prob)
-
-    def get_attention_mask(self, item_seq):
-        """Generate left-to-right uni-directional attention mask for multi-head attention."""
-        attention_mask = (item_seq > 0).long()
-        extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # torch.int64
-        # mask for left-to-right unidirectional
-        max_len = attention_mask.size(-1)
-        attn_shape = (1, max_len, max_len)
-        subsequent_mask = torch.triu(torch.ones(attn_shape), diagonal=1)  # torch.uint8
-        subsequent_mask = (subsequent_mask == 0).unsqueeze(1)
-        subsequent_mask = subsequent_mask.long().to(item_seq.device)
-
-        extended_attention_mask = extended_attention_mask * subsequent_mask
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
-        extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
-        return extended_attention_mask
-
-    def log2feats(self, item_seq):
-        item_seq = torch.LongTensor(item_seq).to(self.dev)
-        position_ids = torch.arange(item_seq.size(1), dtype=torch.long, device=self.dev)
-        position_ids = position_ids.unsqueeze(0).expand_as(item_seq)
-        position_embedding = self.position_emb(position_ids)
-
-        item_emb = self.item_emb(item_seq)
-        input_emb = item_emb + position_embedding
-        input_emb = self.LayerNorm(input_emb)
-        input_emb = self.dropout(input_emb)
-
-        extended_attention_mask = self.get_attention_mask(item_seq)
-        # extended_attention_mask = self.get_bi_attention_mask(item_seq)
-
-        trm_output = self.item_encoder(input_emb, extended_attention_mask, output_all_encoded_layers=True)
-        output = trm_output[-1]
-        return output 
-    
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training        
-        log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
-
-        pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
-        neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
-
-        pos_logits = (log_feats * pos_embs).sum(dim=-1)
-        neg_logits = (log_feats * neg_embs).sum(dim=-1)
-
-        # pos_pred = self.pos_sigmoid(pos_logits)
-        # neg_pred = self.neg_sigmoid(neg_logits)
-
-        return pos_logits, neg_logits # pos_pred, neg_pred
-
-    def predict(self, user_ids, log_seqs, item_indices=None): # for inference
-        log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
-
-        final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
-
-        if item_indices is None : return final_feat
-
-        item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
-
-        logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
-
-        # preds = self.pos_sigmoid(logits) # rank same item list for different users
-
-        return logits # preds # (U, I)
-           
 class SASRec(nn.Module):
     def __init__(self, user_num, item_num, args, config, embeddings=None):
         super(SASRec, self).__init__()
@@ -422,12 +199,12 @@ class SASRec(nn.Module):
 
         return pos_logits, neg_logits # pos_pred, neg_pred
 
-    def predict(self, user_ids, log_seqs, item_indices=None): # for inference
+    def predict(self, user_ids, log_seqs, item_indices=None, is_eavl=False): # for inference
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
 
-        if item_indices is None : return final_feat
+        if not is_eavl : return final_feat
 
         item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
 
@@ -488,12 +265,12 @@ class GRU4Rec(nn.Module):
 
         return pos_logits, neg_logits # pos_pred, neg_pred
 
-    def predict(self, user_ids, log_seqs, item_indices=None): # for inference
+    def predict(self, user_ids, log_seqs, item_indices=None, is_eavl=False): # for inference
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
 
-        if item_indices is None : return final_feat
+        if not is_eavl: return final_feat
 
         item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
 
@@ -503,9 +280,9 @@ class GRU4Rec(nn.Module):
 
         return logits # preds # (U, I)
 
-class Frame(nn.Module):
+class LANE(nn.Module):
     def __init__(self,usernum, itemnum, inte_model, args):
-        super(Frame, self).__init__()
+        super(LANE, self).__init__()
         self.input_dim = args.embedding_dim
         self.hidden = args.hidden
         self.num_heads = args.num_heads

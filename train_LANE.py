@@ -47,10 +47,9 @@ parser.add_argument('--patience', default=10, type=int)
 parser.add_argument('--num_preference', default=5, type=int)
 parser.add_argument('--preprocessed_dir',default='data/preprocessed',type=str)
 
-# parser.add_argument('--preprocessed_data_for_frame', default=False, type=str2bool)
 
 args = parser.parse_args()
-folder = args.dataset + '_' + args.train_dir + '/Frame_' + args.inte_model 
+folder = args.dataset + '_' + args.train_dir + '/LANE_' + args.inte_model 
 if not os.path.isdir(folder):
     os.makedirs(folder)
 with open(os.path.join(folder, 'args.txt'), 'w') as f:
@@ -117,7 +116,7 @@ if __name__ == '__main__':
         t_test = inte_model_evaluate(inte_model, dataset, args)
         print('test (NDCG@10: %.4f, Hit@10: %.4f, NDCG@5: %.4f, HR@5: %.4f)' % (t_test[0], t_test[1], t_test[2], t_test[3]))
         
-    model = Frame(usernum, itemnum, inte_model, args).to(args.device) # no ReLU activation in original inte_model implementation?
+    model = LANE(usernum, itemnum, inte_model, args).to(args.device) # no ReLU activation in original inte_model implementation?
 
     for name, param in model.named_parameters():
         if  'item_emb' in name:

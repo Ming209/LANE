@@ -17,6 +17,7 @@ from functools import partial
 import concurrent.futures
 from num2words import num2words
 from utils import gpt_request
+import argparse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -227,8 +228,8 @@ class Preprocessor(object):
 
         return [user_train, user_valid, user_test, self.num_users, self.num_items, k_and_v, preference]
 
-
-def preprocessed(dataset):
+    
+def preprocessed(dataset,num_preference):
     targetdir = f'data/preprocessed/{dataset}'
 
     if not os.path.exists(targetdir):
@@ -236,8 +237,6 @@ def preprocessed(dataset):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     emb_model = SentenceTransformer('all-MiniLM-L6-v2').to(device)
-
-    num_preference= 5
 
     preprocessor = Preprocessor(num_preference=num_preference,emb_model=emb_model)
     preprocessor.read_data(dataset)
@@ -253,9 +252,10 @@ def preprocessed(dataset):
     with open(os.path.join(targetdir, f"preccesed_data_num_p={num_preference}.pkl"), "wb") as pkl_file:
         pickle.dump(preccesed_data, pkl_file)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset',default='Beauty',type=str)#, required=True)
+parser.add_argument('--num_preference', default=5, type=int)
+args = parser.parse_args()
+
 if __name__ == '__main__':
-    dataset = 'ml-1m'
-    preprocessed(dataset)
-    # with open('data/preprocessed/ml-1m/preccesed_data.pkl', 'rb') as f:
-    #     data = pickle.load(f)
-    # print(data)
+    preprocessed(args.dataset,args.num_preference)
