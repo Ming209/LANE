@@ -17,6 +17,7 @@ parser.add_argument('--train_dir',default='default',type=str)#, required=True)
 parser.add_argument('--inte_model',default='SASRec',type=str)#, required=True)
 parser.add_argument('--inte_model_config_path',default='config/sasrec.json',type=str)#, required=True)
 parser.add_argument('--inte_model_state_dict_path', default=None, type=str)
+parser.add_argument('--state_dict_path', default=None, type=str)
 
 parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--num_epochs', default=401, type=int)
@@ -35,7 +36,6 @@ parser.add_argument('--inference_only', action='store_true', default=False)
 parser.add_argument('--inference_inte_model', action='store_true', default=False)
 parser.add_argument('--generate_explanation', action='store_true', default=False)
 
-parser.add_argument('--state_dict_path', default=None, type=str)
 
 parser.add_argument('--seed', default=42, type=int)
 parser.add_argument('--patience', default=10, type=int)
