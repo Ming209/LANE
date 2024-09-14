@@ -67,13 +67,15 @@ To train **Baseline(SASRec)** on Beauty (with default hyper-parameters):
 python train_baseline.py --dataset=Beauty --model=SASRec --config_path=config/sasrec.json --maxlen=50
 ```
 
+
 To train **LANE(LANE-SASRec)** on Beauty (with default hyper-parameters):
 
 ```
 python train_LANE.py --dataset=Beauty --inte_model=SASRec --inte_model_config_path=config/sasrec.json --maxlen=50
 ```
 
-You can add the `--generate_explanation` parameter to let LANE generate explainable recommendations, which also requires calling the GPT API. Considering the call cost, we only randomly select 100 samples by default to generate explainable recommendations.
+You can add the `--generate_explanation` parameter to let **LANE** generate explainable recommendations, which also requires calling the GPT API. Considering the call cost, we only randomly select 100 samples by default to generate explainable recommendations.
+
 
 ## Reference
 
