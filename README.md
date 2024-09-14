@@ -31,7 +31,7 @@ You can download the three real-world datasets we used from the link below.
 
 - MovieLens: [ml-1m.zip](https://files.grouplens.org/datasets/movielens/ml-1m.zip)
 
-- Amazon: [reviews_Books.json.gz](https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Books.json.gz), [meta_Books.json.gz](https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/meta_Books.json.gz)
+- Amazon: [reviews_Beauty.json.gz](https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Beauty.json.gz), [meta_Beauty.json.gz](https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/meta_Beauty.json.gz)
 
 - Steam: [steam_reviews.json.gz](http://cseweb.ucsd.edu/~wckang/steam_reviews.json.gz), [steam_games.json.gz](http://cseweb.ucsd.edu/~wckang/steam_games.json.gz)
 
@@ -39,7 +39,7 @@ Before running the code, you need to put the downloaded dataset into the corresp
 
 ## Usage
 
-For simplicity, here we take ml-1m as an example：
+For simplicity, here we take Beauty as an example：
 
 ### Preprocessed
 
