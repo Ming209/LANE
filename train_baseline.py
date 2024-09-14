@@ -10,11 +10,6 @@ import pickle
 from model import *
 from utils import *
 
-def str2bool(s):
-    if s not in {'false', 'true'}:
-        raise ValueError('Not a valid boolean string')
-    return s == 'true'
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--dataset',default='Beauty',type=str)#, required=True)
@@ -33,7 +28,7 @@ parser.add_argument('--device', default='cuda:0', type=str)
 
 parser.add_argument('--num_preference', default=5, type=int)
 
-parser.add_argument('--inference_only', default=False, type=str2bool)
+parser.add_argument('--inference_only',action='store_true', default=False)
 parser.add_argument('--state_dict_path', default=None, type=str)
 
 parser.add_argument('--seed', default=42, type=int)
