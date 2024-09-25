@@ -6,6 +6,11 @@ Hongke Zhao, Songming Zheng, Likang Wu, Bowen Yu, Jing Wang. 2024. Can Non-tuned
 
 Please cite our paper if you use the code.
 
+<video width="320" height="240" controls>
+  <source src="https://github.com/Ming209/LANE/blob/master/LANE%20Demo%20-%20Made%20with%20Clipchamp.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ##  Installation
 
 ### Clone the repositoru
